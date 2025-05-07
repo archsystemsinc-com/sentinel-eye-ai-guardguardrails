@@ -1,4 +1,3 @@
-
 import { 
   AIInteraction, 
   Incident, 
@@ -55,6 +54,33 @@ export const sampleRules: ValidationRule[] = [
     contentTypes: ['prompt'],
     severity: 'high',
   },
+  {
+    id: 'rule-6',
+    name: 'Operation Code Names',
+    description: 'Detects mentions of classified operation code names',
+    enabled: true,
+    pattern: 'code-named|operation\\s+[A-Z][a-z]+\\s+[A-Z]?[a-z]+',
+    contentTypes: ['prompt', 'completion'],
+    severity: 'critical',
+  },
+  {
+    id: 'rule-7',
+    name: 'Personnel Count',
+    description: 'Detects specific troop or personnel counts',
+    enabled: true,
+    pattern: '\\b\\d{1,3},\\d{3}\\s+personnel\\b',
+    contentTypes: ['completion'],
+    severity: 'high',
+  },
+  {
+    id: 'rule-8',
+    name: 'Military Equipment',
+    description: 'Detects specific military equipment models',
+    enabled: true,
+    pattern: '\\b(?:XQ-58A|F-35|E-2D|MQ-9|RQ-4)\\b',
+    contentTypes: ['completion'],
+    severity: 'high',
+  },
 ];
 
 // Sample policies
@@ -85,6 +111,15 @@ export const samplePolicies: Policy[] = [
     enabled: true,
     createdAt: '2023-03-05T00:00:00Z',
     updatedAt: '2023-04-15T00:00:00Z',
+  },
+  {
+    id: 'policy-4',
+    name: 'Classified Information Protection',
+    description: 'Policy to prevent disclosure of classified information',
+    rules: [sampleRules[5], sampleRules[6], sampleRules[7]],
+    enabled: true,
+    createdAt: '2023-04-10T00:00:00Z',
+    updatedAt: '2023-05-12T00:00:00Z',
   },
 ];
 
