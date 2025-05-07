@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +9,7 @@ import { useMonitoring } from '@/contexts/MonitoringContext';
 import { ContentType } from '@/types/monitoring';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { RiskGauge } from '@/components/dashboard/RiskGauge';
+import RiskGauge from '@/components/dashboard/RiskGauge';
 
 const AIMonitor: React.FC = () => {
   const { addInteraction } = useMonitoring();

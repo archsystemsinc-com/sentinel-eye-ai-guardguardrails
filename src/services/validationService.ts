@@ -1,4 +1,3 @@
-
 import { ValidationRule, ValidationResult, AIInteraction, ContentType } from '../types/monitoring';
 import { toast } from "@/hooks/use-toast";
 
@@ -84,7 +83,7 @@ export class ValidationService {
       });
     } else if (hasClassified) {
       toast({
-        variant: "warning",
+        variant: "default",
         title: "Classified Information Detected",
         description: `The AI output contains potentially classified information.`,
       });
