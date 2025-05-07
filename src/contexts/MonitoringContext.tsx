@@ -1,11 +1,11 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
   AIInteraction, 
   Incident, 
   ValidationRule, 
   Policy,
-  DashboardMetrics
+  DashboardMetrics,
+  SeverityLevel
 } from '../types/monitoring';
 import { ValidationService } from '../services/validationService';
 import { 
@@ -15,7 +15,7 @@ import {
   generateMockIncidents,
   calculateDashboardMetrics
 } from '../services/mockData';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 
 interface MonitoringContextType {
   interactions: AIInteraction[];
@@ -24,7 +24,7 @@ interface MonitoringContextType {
   policies: Policy[];
   metrics: DashboardMetrics | null;
   validationService: ValidationService;
-  addInteraction: (input: string, output: string, contentType: string) => void;
+  addInteraction: (input: string, output: string, contentType: string) => AIInteraction | null;
   updateIncidentStatus: (id: string, status: 'open' | 'investigating' | 'resolved' | 'false-positive', notes?: string) => void;
   toggleRuleEnabled: (ruleId: string) => void;
   updatePolicy: (policy: Policy) => void;
@@ -125,12 +125,14 @@ export const MonitoringProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         
         if (newIncidents.length > 0) {
           toast({
-            variant: "warning",
+            variant: "destructive",
             title: "Policy Violation Detected",
             description: `${newIncidents.length} violation(s) found in recent interaction`,
           });
         }
       }
+      
+      return newInteraction;
     } catch (error) {
       console.error("Error adding interaction:", error);
       toast({
@@ -138,6 +140,7 @@ export const MonitoringProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         title: "Error",
         description: "Failed to process the AI interaction",
       });
+      return null;
     }
   };
 
