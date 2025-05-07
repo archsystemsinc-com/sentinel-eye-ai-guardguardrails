@@ -1,6 +1,6 @@
 
 import { ValidationRule, ValidationResult, AIInteraction, ContentType } from '../types/monitoring';
-import { toast } from "@/components/ui/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 export class ValidationService {
   private rules: ValidationRule[] = [];
@@ -70,7 +70,10 @@ export class ValidationService {
     
     const blocked = criticalViolations.length > 0;
     
-    if (blocked) {
+    // Check specifically for PII/OPSEC violations
+    const hasPii = this.checkForPII(input);
+    
+    if (blocked || hasPii) {
       toast({
         variant: "destructive",
         title: "Interaction Blocked",
@@ -83,11 +86,27 @@ export class ValidationService {
       timestamp,
       source,
       input,
-      output: blocked ? "⚠️ This interaction was blocked due to policy violation." : output,
+      output: blocked || hasPii ? "⚠️ This interaction was blocked due to policy violation." : output,
       contentType,
       validationResults,
-      blocked
+      blocked: blocked || hasPii
     };
+  }
+  
+  // Helper method to detect PII
+  private checkForPII(content: string): boolean {
+    // Check for phone numbers: XXX-XXX-XXXX format
+    const phoneRegex = /\b(?:\d{3}[-.]?\d{3}[-.]?\d{4})\b/;
+    
+    // Check for military ranks and names
+    const rankRegex = /\b(?:lieutenant|colonel|general|captain|major|sergeant|corporal|private)\b/i;
+    
+    // Check for address request
+    const addressRegex = /\b(?:address|location|residence|home)\b/i;
+    
+    return phoneRegex.test(content) || 
+           rankRegex.test(content) || 
+           addressRegex.test(content);
   }
 
   updateRules(rules: ValidationRule[]): void {

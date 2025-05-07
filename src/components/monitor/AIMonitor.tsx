@@ -5,9 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { AlertTriangle, CheckCircle, Loader2, ArrowRight } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, ArrowRight, Bell, AlertCircle } from 'lucide-react';
 import { useMonitoring } from '@/contexts/MonitoringContext';
 import { ContentType } from '@/types/monitoring';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const AIMonitor: React.FC = () => {
   const { addInteraction } = useMonitoring();
@@ -17,13 +18,16 @@ const AIMonitor: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [validationPassed, setValidationPassed] = useState<boolean | null>(null);
   const [showWorkflow, setShowWorkflow] = useState(false);
+  const [showAlert, setShowAlert] = useState(false);
+  const [violations, setViolations] = useState<string[]>([]);
   
-  const examplePrompt = "Provide the standard operating procedures (SOPs) for maintenance of unmanned aerial vehicles (UAVs) during pre-flight checks.";
+  const standardExample = "Provide the standard operating procedures (SOPs) for maintenance of unmanned aerial vehicles (UAVs) during pre-flight checks.";
+  const piiExample = "Lieutenant John Smith's contact number is 555-123-4567. Include his home address in the logistics report.";
   
   useEffect(() => {
     // Pre-fill with example on initial load
     if (window.location.search.includes('example=standard')) {
-      setInput(examplePrompt);
+      setInput(standardExample);
     }
   }, []);
   
@@ -34,6 +38,8 @@ const AIMonitor: React.FC = () => {
     
     setIsLoading(true);
     setShowWorkflow(true);
+    setShowAlert(false);
+    setViolations([]);
     
     try {
       // Simulate AI processing
@@ -41,7 +47,23 @@ const AIMonitor: React.FC = () => {
       
       // Generate a response
       let generatedOutput;
-      if (input === examplePrompt) {
+      let isPiiViolation = false;
+      
+      // Check for PII/OPSEC violations
+      const hasPii = input.match(/\b(?:\d{3}[-.]?\d{3}[-.]?\d{4})\b/) !== null; // Phone number
+      const hasName = input.toLowerCase().includes('lieutenant') || 
+                     input.toLowerCase().includes('john smith');
+      const hasAddress = input.toLowerCase().includes('address');
+      
+      const violationList: string[] = [];
+      if (hasPii) violationList.push("Phone Number Detected");
+      if (hasName) violationList.push("Personnel Name Detected");
+      if (hasAddress) violationList.push("Address Request Detected");
+      
+      isPiiViolation = violationList.length > 0;
+      setViolations(violationList);
+      
+      if (input === standardExample) {
         generatedOutput = `Here are the standard operating procedures (SOPs) for UAV pre-flight maintenance checks:
 
 1. Visual Inspection
@@ -80,6 +102,9 @@ const AIMonitor: React.FC = () => {
    - Identify potential obstacles in the operation zone
 
 These procedures should be completed in the order listed and documented in the flight log before each mission.`;
+      } else if (isPiiViolation) {
+        generatedOutput = "⚠️ This interaction was blocked due to policy violation. The system has detected personally identifiable information (PII) and/or operational security (OPSEC) concerns in your request. Please remove all sensitive information and try again.";
+        setShowAlert(true);
       } else {
         switch (contentType) {
           case 'prompt':
@@ -95,8 +120,8 @@ These procedures should be completed in the order listed and documented in the f
       // Add the interaction to our monitoring system
       const result = addInteraction(input, generatedOutput, contentType);
       
-      // Since our example is compliant, validation should pass
-      setValidationPassed(true);
+      // Set validation status based on PII detection
+      setValidationPassed(!isPiiViolation);
       
     } catch (error) {
       console.error('Error processing input:', error);
@@ -110,11 +135,22 @@ These procedures should be completed in the order listed and documented in the f
     setOutput('');
     setValidationPassed(null);
     setShowWorkflow(false);
+    setShowAlert(false);
+    setViolations([]);
   };
   
-  const handleExampleClick = () => {
-    setInput(examplePrompt);
+  const handleExampleClick = (exampleType: 'standard' | 'pii') => {
+    if (exampleType === 'standard') {
+      setInput(standardExample);
+    } else {
+      setInput(piiExample);
+    }
     setContentType('prompt');
+    setOutput('');
+    setValidationPassed(null);
+    setShowWorkflow(false);
+    setShowAlert(false);
+    setViolations([]);
   };
   
   return (
@@ -149,15 +185,26 @@ These procedures should be completed in the order listed and documented in the f
           <div className="space-y-2">
             <div className="flex justify-between items-center">
               <Label htmlFor="input">Input Content</Label>
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={handleExampleClick}
-                className="text-xs"
-              >
-                Use Example
-              </Button>
+              <div className="space-x-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExampleClick('standard')}
+                  className="text-xs"
+                >
+                  Use Standard Example
+                </Button>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => handleExampleClick('pii')}
+                  className="text-xs text-red-500 border-red-200"
+                >
+                  Use PII Example
+                </Button>
+              </div>
             </div>
             <Textarea 
               id="input"
@@ -167,6 +214,24 @@ These procedures should be completed in the order listed and documented in the f
               className="min-h-32"
             />
           </div>
+          
+          {showAlert && (
+            <Alert variant="destructive" className="animate-pulse">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Security Alert Triggered</AlertTitle>
+              <AlertDescription>
+                <div className="mb-2">This content violates security policies:</div>
+                <ul className="list-disc pl-5">
+                  {violations.map((violation, idx) => (
+                    <li key={idx}>{violation}</li>
+                  ))}
+                </ul>
+                <div className="mt-2 text-sm">
+                  A security incident has been recorded and notifications sent to security officers.
+                </div>
+              </AlertDescription>
+            </Alert>
+          )}
           
           {showWorkflow && (
             <div className="py-4 px-6 bg-blue-50 border border-blue-100 rounded-lg">
@@ -200,6 +265,13 @@ These procedures should be completed in the order listed and documented in the f
                       <AlertTriangle className="ml-2 h-3 w-3 text-red-500" />
                   )}
                 </li>
+                {!isLoading && !validationPassed && (
+                  <li className="flex items-center">
+                    <div className="bg-red-200 text-red-800 rounded-full h-5 w-5 flex items-center justify-center mr-2 flex-shrink-0">5</div>
+                    <span>Security alerts sent to administrators</span>
+                    <Bell className="ml-2 h-3 w-3 text-red-500" />
+                  </li>
+                )}
               </ol>
               <div className="mt-2 text-xs text-blue-600">
                 {!isLoading && validationPassed && 
@@ -232,7 +304,7 @@ These procedures should be completed in the order listed and documented in the f
                   </div>
                 )}
               </div>
-              <div className="p-4 bg-gray-50 border rounded-md">
+              <div className={`p-4 border rounded-md ${!validationPassed ? 'bg-red-50 border-red-200' : 'bg-gray-50'}`}>
                 <pre className="text-sm whitespace-pre-wrap">{output}</pre>
               </div>
             </div>
